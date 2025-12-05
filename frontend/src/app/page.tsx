@@ -2,28 +2,68 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useGameStore } from '@/store/gameStore';
+import { connectPolkadotWallet, connectStellarWallet } from '@/lib/wallets';
 
 export default function Home() {
   const router = useRouter();
+  const { connectPolkadot, connectStellar, setEmail: storeSetEmail, isConnected } = useGameStore();
+
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [connecting, setConnecting] = useState<null | 'polkadot' | 'stellar' | 'email'>(null);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'email' | 'wallet'>('email');
 
-  const handleEmailSignup = (e: React.FormEvent) => {
+  // If already connected, redirect to arena
+  if (isConnected) {
+    router.push('/arena');
+  }
+
+  const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      localStorage.setItem('userEmail', email);
+    setError(null);
+    setConnecting('email');
+
+    try {
+      // Simulate wallet creation for email users
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      storeSetEmail(email);
       router.push('/arena');
-    }, 1200);
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account');
+    } finally {
+      setConnecting(null);
+    }
   };
 
-  const handleConnectWallet = () => {
-    setLoading(true);
-    // Simulate wallet connection
-    setTimeout(() => {
+  const handleConnectPolkadot = async () => {
+    setError(null);
+    setConnecting('polkadot');
+    try {
+      const { address } = await connectPolkadotWallet();
+      connectPolkadot(address);
       router.push('/arena');
-    }, 1500);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Failed to connect Polkadot wallet. Make sure you have Talisman, SubWallet, or Polkadot.js extension installed.');
+    } finally {
+      setConnecting(null);
+    }
+  };
+
+  const handleConnectStellar = async () => {
+    setError(null);
+    setConnecting('stellar');
+    try {
+      const { address } = await connectStellarWallet();
+      connectStellar(address);
+      router.push('/arena');
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Failed to connect Stellar wallet. Make sure you have Freighter extension installed.');
+    } finally {
+      setConnecting(null);
+    }
   };
 
   const handlePlayNow = () => {
@@ -123,13 +163,20 @@ export default function Home() {
                 Choose how you want to enter the arena
               </p>
 
+              {/* Error Display */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm text-center">
+                  {error}
+                </div>
+              )}
+
               {/* Tab Switcher */}
               <div className="flex bg-slate-800/50 rounded-xl p-1 mb-6">
                 <button
                   onClick={() => setActiveTab('email')}
                   className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${activeTab === 'email'
-                      ? 'bg-gradient-to-r from-cyan-500 to-green-500 text-black'
-                      : 'text-slate-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-cyan-500 to-green-500 text-black'
+                    : 'text-slate-400 hover:text-white'
                     }`}
                 >
                   📧 Email Signup
@@ -137,8 +184,8 @@ export default function Home() {
                 <button
                   onClick={() => setActiveTab('wallet')}
                   className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${activeTab === 'wallet'
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                      : 'text-slate-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    : 'text-slate-400 hover:text-white'
                     }`}
                 >
                   🔗 Connect Wallet
@@ -160,6 +207,7 @@ export default function Home() {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         placeholder="gamer@example.com"
+                        disabled={connecting !== null}
                       />
                       <p className="mt-2 text-xs text-slate-400 flex items-center gap-2">
                         <span>✨</span>
@@ -169,10 +217,10 @@ export default function Home() {
 
                     <button
                       type="submit"
-                      disabled={loading}
+                      disabled={connecting !== null}
                       className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {loading ? (
+                      {connecting === 'email' ? (
                         <>
                           <span className="loading-spinner" />
                           <span>Creating Your Wallets...</span>
@@ -207,39 +255,37 @@ export default function Home() {
               {activeTab === 'wallet' && (
                 <div className="space-y-3 animate-in">
                   <button
-                    onClick={handleConnectWallet}
-                    className="btn-wallet"
+                    onClick={handleConnectPolkadot}
+                    disabled={connecting !== null}
+                    className="btn-wallet disabled:opacity-50"
                   >
                     <span className="text-2xl">🟣</span>
                     <div className="text-left flex-1">
-                      <div className="font-semibold">Polkadot.js</div>
-                      <div className="text-xs text-slate-400">Connect with Polkadot wallet</div>
+                      <div className="font-semibold">Polkadot.js / Talisman / SubWallet</div>
+                      <div className="text-xs text-slate-400">Connect with Polkadot wallet extension</div>
                     </div>
-                    <span className="text-slate-400">→</span>
+                    {connecting === 'polkadot' ? (
+                      <span className="loading-spinner" />
+                    ) : (
+                      <span className="text-slate-400">→</span>
+                    )}
                   </button>
 
                   <button
-                    onClick={handleConnectWallet}
-                    className="btn-wallet"
+                    onClick={handleConnectStellar}
+                    disabled={connecting !== null}
+                    className="btn-wallet disabled:opacity-50"
                   >
                     <span className="text-2xl">⭐</span>
                     <div className="text-left flex-1">
                       <div className="font-semibold">Freighter</div>
-                      <div className="text-xs text-slate-400">Connect with Stellar wallet</div>
+                      <div className="text-xs text-slate-400">Connect with Stellar wallet extension</div>
                     </div>
-                    <span className="text-slate-400">→</span>
-                  </button>
-
-                  <button
-                    onClick={handleConnectWallet}
-                    className="btn-wallet"
-                  >
-                    <span className="text-2xl">🦊</span>
-                    <div className="text-left flex-1">
-                      <div className="font-semibold">MetaMask</div>
-                      <div className="text-xs text-slate-400">Connect via EVM compatible</div>
-                    </div>
-                    <span className="text-slate-400">→</span>
+                    {connecting === 'stellar' ? (
+                      <span className="loading-spinner" />
+                    ) : (
+                      <span className="text-slate-400">→</span>
+                    )}
                   </button>
 
                   <div className="divider">or start fresh</div>
