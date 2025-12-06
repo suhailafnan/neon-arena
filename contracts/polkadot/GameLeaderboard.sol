@@ -276,27 +276,30 @@ contract GameLeaderboard {
     // ============ Internal Functions ============
     
     function _updateLeaderboard(PlayerScore[] storage leaderboard, PlayerScore memory newScore) internal {
-        // Find insert position
-        uint256 insertIndex = leaderboard.length;
-        
+        // Find if player already exists
+        int256 existingIndex = -1;
         for (uint256 i = 0; i < leaderboard.length; i++) {
-            // Check if same player already exists
             if (leaderboard[i].player == newScore.player) {
                 // Only update if new score is higher
-                if (newScore.score > leaderboard[i].score) {
-                    // Remove old entry
-                    for (uint256 j = i; j < leaderboard.length - 1; j++) {
-                        leaderboard[j] = leaderboard[j + 1];
-                    }
-                    leaderboard.pop();
-                } else {
+                if (newScore.score <= leaderboard[i].score) {
                     return; // Don't update if score is not higher
                 }
+                existingIndex = int256(i);
                 break;
             }
         }
         
-        // Find insert position based on score
+        // If player exists, remove their old entry
+        if (existingIndex >= 0) {
+            uint256 idx = uint256(existingIndex);
+            for (uint256 j = idx; j < leaderboard.length - 1; j++) {
+                leaderboard[j] = leaderboard[j + 1];
+            }
+            leaderboard.pop();
+        }
+        
+        // Find insert position based on score (descending order)
+        uint256 insertIndex = leaderboard.length;
         for (uint256 i = 0; i < leaderboard.length; i++) {
             if (newScore.score > leaderboard[i].score) {
                 insertIndex = i;
@@ -304,18 +307,19 @@ contract GameLeaderboard {
             }
         }
         
-        // Only insert if within max size
+        // Only insert if within max size or if we're replacing an existing position
         if (insertIndex < MAX_LEADERBOARD_SIZE) {
             // Add new entry at end
             leaderboard.push(newScore);
             
-            // Shift entries to make room
-            for (uint256 i = leaderboard.length - 1; i > insertIndex; i--) {
-                leaderboard[i] = leaderboard[i - 1];
+            // Shift entries to make room (move from end to insertIndex)
+            if (leaderboard.length > 1 && insertIndex < leaderboard.length - 1) {
+                for (uint256 i = leaderboard.length - 1; i > insertIndex; i--) {
+                    leaderboard[i] = leaderboard[i - 1];
+                }
+                // Insert new score at correct position
+                leaderboard[insertIndex] = newScore;
             }
-            
-            // Insert new score
-            leaderboard[insertIndex] = newScore;
             
             // Trim to max size
             while (leaderboard.length > MAX_LEADERBOARD_SIZE) {
