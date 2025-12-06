@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { connectPolkadotWallet, connectStellarWallet } from '@/lib/wallets';
+import Leaderboard from '@/components/Leaderboard';
 
 export default function Home() {
   const router = useRouter();
@@ -14,10 +15,12 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'email' | 'wallet'>('email');
 
-  // If already connected, redirect to arena
-  if (isConnected) {
-    router.push('/arena');
-  }
+  // If already connected, redirect to arena (must be in useEffect to avoid render-time setState)
+  useEffect(() => {
+    if (isConnected) {
+      router.push('/arena');
+    }
+  }, [isConnected, router]);
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,6 +152,19 @@ export default function Home() {
               <div className="stat-value">∞</div>
               <div className="stat-label">Fun Guaranteed</div>
             </div>
+          </div>
+        </section>
+
+        {/* On-Chain Leaderboard Section */}
+        <section className="py-16">
+          <h2 className="text-3xl font-bold text-center mb-4">
+            🏆 On-Chain Leaderboard
+          </h2>
+          <p className="text-slate-400 text-center mb-8 max-w-xl mx-auto">
+            Real scores, real players, all verified on the blockchain
+          </p>
+          <div className="max-w-2xl mx-auto">
+            <Leaderboard type="weekly" limit={5} />
           </div>
         </section>
 

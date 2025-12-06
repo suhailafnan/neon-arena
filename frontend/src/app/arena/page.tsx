@@ -22,6 +22,7 @@ export default function ArenaPage() {
     const [txHash, setTxHash] = useState<string | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [showLeaderboard, setShowLeaderboard] = useState(false);
+    const [leaderboardRefresh, setLeaderboardRefresh] = useState(0); // Increment to refresh leaderboard
 
     // Redirect if not connected
     useEffect(() => {
@@ -131,6 +132,11 @@ export default function ArenaPage() {
             const hash = await leaderboardService.submitScore(currentScore, 'target_blitz');
             setTxHash(hash);
             setSubmitStatus('success');
+
+            // Refresh leaderboard after successful submission
+            setTimeout(() => {
+                setLeaderboardRefresh(prev => prev + 1);
+            }, 2000); // Wait 2 seconds for blockchain to update
         } catch (error: any) {
             console.error('Failed to submit score:', error);
             setSubmitError(error.message || 'Failed to submit score');
@@ -394,8 +400,8 @@ export default function ArenaPage() {
                             <button
                                 onClick={() => setShowLeaderboard(false)}
                                 className={`flex-1 py-2 px-4 rounded-lg font-semibold text-sm transition-all ${!showLeaderboard
-                                        ? 'bg-gradient-to-r from-cyan-500 to-green-500 text-black'
-                                        : 'text-slate-400 hover:text-white'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-green-500 text-black'
+                                    : 'text-slate-400 hover:text-white'
                                     }`}
                             >
                                 Weekly
@@ -403,8 +409,8 @@ export default function ArenaPage() {
                             <button
                                 onClick={() => setShowLeaderboard(true)}
                                 className={`flex-1 py-2 px-4 rounded-lg font-semibold text-sm transition-all ${showLeaderboard
-                                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                                        : 'text-slate-400 hover:text-white'
+                                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                                    : 'text-slate-400 hover:text-white'
                                     }`}
                             >
                                 All-Time
@@ -415,6 +421,7 @@ export default function ArenaPage() {
                         <Leaderboard
                             type={showLeaderboard ? 'alltime' : 'weekly'}
                             limit={10}
+                            refreshTrigger={leaderboardRefresh}
                         />
 
                         {/* How to Get Test Tokens */}

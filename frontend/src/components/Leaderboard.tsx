@@ -7,9 +7,10 @@ interface LeaderboardProps {
     type?: 'weekly' | 'alltime';
     limit?: number;
     showTitle?: boolean;
+    refreshTrigger?: number; // Increment this to force refresh
 }
 
-export default function Leaderboard({ type = 'weekly', limit = 10, showTitle = true }: LeaderboardProps) {
+export default function Leaderboard({ type = 'weekly', limit = 10, showTitle = true, refreshTrigger = 0 }: LeaderboardProps) {
     const [scores, setScores] = useState<PlayerScore[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -23,7 +24,7 @@ export default function Leaderboard({ type = 'weekly', limit = 10, showTitle = t
         // Refresh every 30 seconds
         const interval = setInterval(loadLeaderboard, 30000);
         return () => clearInterval(interval);
-    }, [type, limit]);
+    }, [type, limit, refreshTrigger]); // Add refreshTrigger to dependencies
 
     // Countdown timer for weekly reset
     useEffect(() => {

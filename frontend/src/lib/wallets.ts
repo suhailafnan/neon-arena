@@ -1,12 +1,18 @@
 'use client';
 
-import { web3Enable, web3Accounts } from '@polkadot/extension-dapp';
-import { ApiPromise, WsProvider } from '@polkadot/api';
-import { isConnected, getAddress } from '@stellar/freighter-api';
-
+// These libraries access window at import time, so we need to use dynamic imports
 const POLKADOT_RPC = process.env.NEXT_PUBLIC_POLKADOT_RPC || 'wss://rpc.polkadot.io';
 
 export async function connectPolkadotWallet() {
+    // Check if we're in browser
+    if (typeof window === 'undefined') {
+        throw new Error('Cannot connect wallet on server side');
+    }
+
+    // Dynamic import to avoid SSR issues
+    const { web3Enable, web3Accounts } = await import('@polkadot/extension-dapp');
+    const { ApiPromise, WsProvider } = await import('@polkadot/api');
+
     // Ask extensions (Talisman/SubWallet/polkadot.js) for access
     const extensions = await web3Enable('Neon Arena');
     if (!extensions || extensions.length === 0) {
@@ -30,6 +36,14 @@ export async function connectPolkadotWallet() {
 }
 
 export async function connectStellarWallet() {
+    // Check if we're in browser
+    if (typeof window === 'undefined') {
+        throw new Error('Cannot connect wallet on server side');
+    }
+
+    // Dynamic import to avoid SSR issues
+    const { isConnected, getAddress } = await import('@stellar/freighter-api');
+
     const connected = await isConnected();
     if (!connected) {
         throw new Error('Freighter wallet not found or not connected.');

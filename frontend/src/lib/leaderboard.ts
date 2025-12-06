@@ -74,19 +74,37 @@ class LeaderboardService {
         return this.readOnlyContract;
     }
 
-    // Check if MetaMask is installed
+    // Get ethereum provider - handles late injection by wallets
+    private getEthereumProvider(): any {
+        if (typeof window === 'undefined') return null;
+
+        // Check for ethereum object (MetaMask, Brave, etc)
+        if (window.ethereum) {
+            return window.ethereum;
+        }
+
+        // Fallback: check if it's available as a property
+        if ((window as any).web3?.currentProvider) {
+            return (window as any).web3.currentProvider;
+        }
+
+        return null;
+    }
+
+    // Check if any EVM wallet is installed
     isMetaMaskInstalled(): boolean {
-        return typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
+        return this.getEthereumProvider() !== null;
     }
 
     // Switch to Moonbase Alpha network
     async switchToMoonbase(): Promise<boolean> {
-        if (!this.isMetaMaskInstalled()) {
-            throw new Error('MetaMask is not installed');
+        const ethereum = this.getEthereumProvider();
+        if (!ethereum) {
+            throw new Error('No wallet found. Please install MetaMask.');
         }
 
         try {
-            await window.ethereum.request({
+            await ethereum.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{ chainId: MOONBASE_CONFIG.chainId }],
             });
@@ -95,7 +113,7 @@ class LeaderboardService {
             // Chain not added, try to add it
             if (switchError.code === 4902) {
                 try {
-                    await window.ethereum.request({
+                    await ethereum.request({
                         method: 'wallet_addEthereumChain',
                         params: [MOONBASE_CONFIG],
                     });
@@ -111,29 +129,38 @@ class LeaderboardService {
 
     // Connect to MetaMask and get signer
     async connect(): Promise<string> {
-        if (!this.isMetaMaskInstalled()) {
-            throw new Error('Please install MetaMask to submit scores on-chain');
+        const ethereum = this.getEthereumProvider();
+        if (!ethereum) {
+            throw new Error('Please install MetaMask or another EVM wallet to submit scores on-chain');
         }
 
-        // Switch to Moonbase Alpha
-        await this.switchToMoonbase();
+        try {
+            // Switch to Moonbase Alpha
+            await this.switchToMoonbase();
 
-        // Request account access
-        this.provider = new BrowserProvider(window.ethereum);
-        const accounts = await this.provider.send('eth_requestAccounts', []);
+            // Request account access
+            this.provider = new BrowserProvider(ethereum);
+            const accounts = await this.provider.send('eth_requestAccounts', []);
 
-        if (accounts.length === 0) {
-            throw new Error('No accounts found');
+            if (accounts.length === 0) {
+                throw new Error('No accounts found');
+            }
+
+            // Get signer and create contract instance
+            const signer = await this.provider.getSigner();
+
+            if (CONTRACT_ADDRESS) {
+                this.contract = new Contract(CONTRACT_ADDRESS, LEADERBOARD_ABI, signer);
+            }
+
+            return accounts[0];
+        } catch (error: any) {
+            // Handle user rejection gracefully
+            if (error.code === 4001 || error.message?.includes('rejected')) {
+                throw new Error('Wallet connection was cancelled. Please try again.');
+            }
+            throw error;
         }
-
-        // Get signer and create contract instance
-        const signer = await this.provider.getSigner();
-
-        if (CONTRACT_ADDRESS) {
-            this.contract = new Contract(CONTRACT_ADDRESS, LEADERBOARD_ABI, signer);
-        }
-
-        return accounts[0];
     }
 
     // Get current connected address
