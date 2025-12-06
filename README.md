@@ -56,14 +56,25 @@ The game's leaderboard is powered by the `GameLeaderboard` smart contract deploy
 - **Contract Address**: `Check frontend/.env.local`
 - **Chain ID**: 1287
 
-## 🛠️ Tech Stack
+## � Team Members
 
-- **Frontend**: Next.js, React, Tailwind CSS, Framer Motion
+- **Suhail Afnan** ([@suhailafnan](https://github.com/suhailafnan))
+- **Hilmi KT**
+- **Anandhu P**
+
+## 🎥 Demo
+
+[Link to Demo Video]
+
+## �🛠️ Tech Stack
+
+- **Frontend**: Next.js, React, Tailwind CSS, Framer Motion, TypeScript
 - **Blockchain**: Solidity, Hardhat, Ethers.js
-- **Network**: Moonbeam (Polkadot Parachain)
+- **Network**: Moonbase Alpha (Polkadot/Moonbeam Testnet)
 - **State Management**: Zustand
+- **Wallets**: Polkadot.js, MetaMask, SubWallet
 
-## 🤝 Contributing
+## 🚀 Getting Started
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
